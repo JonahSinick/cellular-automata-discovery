@@ -127,11 +127,23 @@
                 </div>
 
                 <div class="control-group">
-                    <label>Colors</label>
-                    <div class="color-bar">
-                        <div class="color-swatch" style="background:#141420"></div>
-                        <div class="color-swatch" style="background:#00d4ff"></div>
-                        <div class="color-swatch" style="background:#ff6b6b"></div>
+                    <label>Color Palette</label>
+                    <select id="paletteSelect" onchange="changePalette(this.value)">
+                        <option value="ocean">Ocean</option>
+                        <option value="sunset">Sunset</option>
+                        <option value="forest">Forest</option>
+                        <option value="berry">Berry</option>
+                        <option value="earth">Earth</option>
+                        <option value="mint">Mint</option>
+                        <option value="coral">Coral Reef</option>
+                        <option value="lavender">Lavender</option>
+                        <option value="sage">Sage</option>
+                        <option value="dusk">Dusk</option>
+                    </select>
+                    <div class="color-bar" id="colorBar">
+                        <div class="color-swatch" style="background:#1a2634"></div>
+                        <div class="color-swatch" style="background:#4ecdc4"></div>
+                        <div class="color-swatch" style="background:#ffe66d"></div>
                     </div>
                 </div>
 
@@ -148,7 +160,22 @@
     <script>
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
-        const palette = ['#141420', '#00d4ff', '#ff6b6b'];
+
+        const palettes = {
+            'ocean': ['#1a2634', '#4ecdc4', '#ffe66d'],
+            'sunset': ['#2d1b4e', '#ff6b6b', '#feca57'],
+            'forest': ['#1a2f1a', '#7cb587', '#e8d5b7'],
+            'berry': ['#2d132c', '#c56cf0', '#ffb8b8'],
+            'earth': ['#2c2416', '#c4a77d', '#8b5a2b'],
+            'mint': ['#1e3d3d', '#a8e6cf', '#fdffab'],
+            'coral': ['#1f2833', '#ff7e67', '#fafafa'],
+            'lavender': ['#1a1a2e', '#a29bfe', '#ffeaa7'],
+            'sage': ['#2d3436', '#b8d4a8', '#f9f3e3'],
+            'dusk': ['#0f0e17', '#ff8e72', '#e4c1f9'],
+        };
+
+        let currentPalette = 'ocean';
+        let palette = palettes[currentPalette];
 
         let gridSize = 150;
         let cellSize = 4;
@@ -357,9 +384,24 @@
             }
         });
 
+        function changePalette(name) {
+            currentPalette = name;
+            palette = palettes[name];
+            updateColorBar();
+            render();
+        }
+
+        function updateColorBar() {
+            const bar = document.getElementById('colorBar');
+            bar.innerHTML = palette.map(c =>
+                `<div class="color-swatch" style="background:${c}"></div>`
+            ).join('');
+        }
+
         // Initialize
         initCanvas();
         updateRule();
+        updateColorBar();
         reset();
     </script>
 </body>
