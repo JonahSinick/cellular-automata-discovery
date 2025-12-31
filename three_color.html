@@ -85,11 +85,11 @@
                 <div class="control-group">
                     <label>Discovered Patterns</label>
                     <div class="preset-grid">
-                        <button class="btn-secondary featured" onclick="setPreset('baroque')">Baroque Curls</button>
+                        <button class="btn-secondary featured" onclick="setPreset('intermittent')">Intermittent</button>
+                        <button class="btn-secondary" onclick="setPreset('baroque')">Baroque Curls</button>
                         <button class="btn-secondary" onclick="setPreset('maze')">Geo Mazes</button>
                         <button class="btn-secondary" onclick="setPreset('smooth')">Smooth Flow</button>
                         <button class="btn-secondary" onclick="setPreset('swirls')">Paisley</button>
-                        <button class="btn-secondary" onclick="setPreset('diagonal')">Diagonal</button>
                         <button class="btn-secondary" onclick="setPreset('cyclic3')">Classic T3</button>
                     </div>
                 </div>
@@ -99,6 +99,7 @@
                     <select id="ruleType" onchange="updateRule()">
                         <option value="cyclic">Cyclic</option>
                         <option value="chase">Chase & Flee</option>
+                        <option value="intermittent">Intermittent (stable↔unstable)</option>
                         <option value="range2">Range-2 Cyclic</option>
                         <option value="diagonal">Diagonal Only</option>
                     </select>
@@ -112,6 +113,11 @@
                 <div class="control-group" id="fleeGroup">
                     <label>Flee Threshold: <span id="fleeValue">5</span></label>
                     <input type="range" id="fleeSlider" min="2" max="7" value="5">
+                </div>
+
+                <div class="control-group" id="periodGroup" style="display:none">
+                    <label>Cycle Period: <span id="periodValue">60</span> generations</label>
+                    <input type="range" id="periodSlider" min="30" max="150" value="60">
                 </div>
 
                 <div class="control-group">
@@ -188,6 +194,7 @@
         let ruleType = 'chase';
         let threshold = 3;
         let fleeThreshold = 5;
+        let period = 60;
 
         function initCanvas() {
             canvas.width = gridSize * cellSize;
@@ -229,6 +236,13 @@
         }
 
         function step() {
+            // For intermittent mode, threshold oscillates with generation
+            let effectiveThreshold = threshold;
+            if (ruleType === 'intermittent') {
+                const phase = (generation % period) / period * 2 * Math.PI;
+                effectiveThreshold = Math.round(3 + 2 * Math.sin(phase));
+            }
+
             const newGrid = [];
             for (let y = 0; y < gridSize; y++) {
                 newGrid[y] = [];
@@ -238,9 +252,9 @@
                     const prev = (current + 2) % 3;
                     let advance = false;
 
-                    if (ruleType === 'cyclic') {
+                    if (ruleType === 'cyclic' || ruleType === 'intermittent') {
                         const nextN = countNeighborsState(x, y, next);
-                        advance = nextN >= threshold;
+                        advance = nextN >= effectiveThreshold;
                     } else if (ruleType === 'chase') {
                         const nextN = countNeighborsState(x, y, next);
                         const prevN = countNeighborsState(x, y, prev);
@@ -295,16 +309,28 @@
 
         function updateStats() {
             document.getElementById('genStat').textContent = generation;
-            let ruleName = ruleType === 'chase' ? `Chase C${threshold}F${fleeThreshold}` :
-                          ruleType === 'range2' ? `Range2 T${threshold}` :
-                          ruleType === 'diagonal' ? `Diag T${threshold}` :
-                          `Cyclic T${threshold}`;
+            let ruleName;
+            if (ruleType === 'chase') {
+                ruleName = `Chase C${threshold}F${fleeThreshold}`;
+            } else if (ruleType === 'range2') {
+                ruleName = `Range2 T${threshold}`;
+            } else if (ruleType === 'diagonal') {
+                ruleName = `Diag T${threshold}`;
+            } else if (ruleType === 'intermittent') {
+                const phase = (generation % period) / period;
+                const effectiveT = Math.round(3 + 2 * Math.sin(phase * 2 * Math.PI));
+                const state = effectiveT <= 2 ? '🔴 active' : '⚪ stable';
+                ruleName = `T=${effectiveT} ${state}`;
+            } else {
+                ruleName = `Cyclic T${threshold}`;
+            }
             document.getElementById('ruleStat').textContent = ruleName;
         }
 
         function updateRule() {
             ruleType = document.getElementById('ruleType').value;
             document.getElementById('fleeGroup').style.display = ruleType === 'chase' ? 'block' : 'none';
+            document.getElementById('periodGroup').style.display = ruleType === 'intermittent' ? 'block' : 'none';
 
             // Adjust threshold ranges
             const slider = document.getElementById('thresholdSlider');
@@ -314,8 +340,12 @@
             } else if (ruleType === 'diagonal') {
                 slider.max = 4;
                 if (threshold > 4) { threshold = 2; slider.value = 2; }
+            } else if (ruleType === 'intermittent') {
+                // Hide threshold for intermittent (it oscillates automatically)
+                slider.parentElement.style.display = 'none';
             } else {
                 slider.max = 8;
+                slider.parentElement.style.display = 'block';
             }
             document.getElementById('thresholdValue').textContent = threshold;
         }
@@ -342,23 +372,27 @@
 
         function setPreset(name) {
             const presets = {
-                'baroque':  { type: 'chase', thresh: 3, flee: 5 },
-                'maze':     { type: 'chase', thresh: 2, flee: 5 },
-                'smooth':   { type: 'range2', thresh: 10, flee: 5 },
-                'swirls':   { type: 'cyclic', thresh: 3, flee: 5 },
-                'diagonal': { type: 'diagonal', thresh: 2, flee: 5 },
-                'cyclic3':  { type: 'cyclic', thresh: 3, flee: 5 },
+                'intermittent': { type: 'intermittent', thresh: 3, flee: 5, per: 60 },
+                'baroque':  { type: 'chase', thresh: 3, flee: 5, per: 60 },
+                'maze':     { type: 'chase', thresh: 2, flee: 5, per: 60 },
+                'smooth':   { type: 'range2', thresh: 10, flee: 5, per: 60 },
+                'swirls':   { type: 'cyclic', thresh: 3, flee: 5, per: 60 },
+                'diagonal': { type: 'diagonal', thresh: 2, flee: 5, per: 60 },
+                'cyclic3':  { type: 'cyclic', thresh: 3, flee: 5, per: 60 },
             };
             const p = presets[name];
             if (p) {
                 ruleType = p.type;
                 threshold = p.thresh;
                 fleeThreshold = p.flee;
+                period = p.per;
                 document.getElementById('ruleType').value = ruleType;
                 document.getElementById('thresholdSlider').value = threshold;
                 document.getElementById('fleeSlider').value = fleeThreshold;
+                document.getElementById('periodSlider').value = period;
                 document.getElementById('thresholdValue').textContent = threshold;
                 document.getElementById('fleeValue').textContent = fleeThreshold;
+                document.getElementById('periodValue').textContent = period;
                 updateRule();
                 reset();
             }
@@ -382,6 +416,11 @@
                 clearInterval(intervalId);
                 intervalId = setInterval(step, 1000 / speed);
             }
+        });
+
+        document.getElementById('periodSlider').addEventListener('input', (e) => {
+            period = parseInt(e.target.value);
+            document.getElementById('periodValue').textContent = period;
         });
 
         function changePalette(name) {
