@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cellular Automata Explorer</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: #00d4ff;
+            margin-bottom: 20px;
+        }
+        .main-layout {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .canvas-container {
+            flex: 1;
+            min-width: 400px;
+            background: #0f0f1a;
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        canvas {
+            border: 2px solid #333;
+            cursor: crosshair;
+        }
+        .controls {
+            width: 280px;
+            background: #16213e;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .control-group {
+            margin-bottom: 20px;
+        }
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #888;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .control-group input[type="range"] {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+        .control-group input[type="text"],
+        .control-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            background: #0f0f1a;
+            color: #eee;
+            font-size: 14px;
+        }
+        .control-group select {
+            cursor: pointer;
+        }
+        .buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        button {
+            flex: 1;
+            min-width: 70px;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        button:hover {
+            transform: translateY(-1px);
+        }
+        .btn-primary {
+            background: #00d4ff;
+            color: #000;
+        }
+        .btn-primary:hover {
+            background: #00a8cc;
+        }
+        .btn-secondary {
+            background: #333;
+            color: #eee;
+        }
+        .btn-secondary:hover {
+            background: #444;
+        }
+        .btn-danger {
+            background: #e94560;
+            color: #fff;
+        }
+        .btn-danger:hover {
+            background: #c73e54;
+        }
+        .stats {
+            background: #0f0f1a;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: monospace;
+            font-size: 13px;
+        }
+        .stats div {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        .stats span:first-child {
+            color: #888;
+        }
+        .stats span:last-child {
+            color: #00d4ff;
+        }
+        .value-display {
+            text-align: right;
+            font-family: monospace;
+            color: #00d4ff;
+            font-size: 12px;
+        }
+        .preset-rules {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+        }
+        .preset-rules button {
+            font-size: 11px;
+            padding: 8px;
+        }
+        .instructions {
+            margin-top: 15px;
+            padding: 15px;
+            background: #0f0f1a;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #888;
+        }
+        .instructions p {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Cellular Automata Explorer</h1>
+
+        <div class="main-layout">
+            <div class="canvas-container">
+                <canvas id="canvas"></canvas>
+            </div>
+
+            <div class="controls">
+                <div class="control-group">
+                    <label>Rule (Birth/Survival)</label>
+                    <input type="text" id="ruleInput" value="B3/S23" placeholder="e.g., B3/S23">
+                </div>
+
+                <div class="control-group">
+                    <label>Presets</label>
+                    <div class="preset-rules">
+                        <button class="btn-secondary" onclick="setRule('B014/S03')" style="background:#00d4ff;color:#000">Coastlines</button>
+                        <button class="btn-secondary" onclick="setRule('B0126/S0')">Camouflage</button>
+                        <button class="btn-secondary" onclick="setRule('B4567/S03457')">Asteroids</button>
+                        <button class="btn-secondary" onclick="setRule('B3678/S34678')">Day&Night</button>
+                        <button class="btn-secondary" onclick="setRule('B3/S23')">Life</button>
+                        <button class="btn-secondary" onclick="setRule('B36/S23')">HighLife</button>
+                        <button class="btn-secondary" onclick="setRule('B368/S245')">Morley</button>
+                        <button class="btn-secondary" onclick="randomRule()">Random</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Speed: <span id="speedValue">10</span> gen/s</label>
+                    <input type="range" id="speedSlider" min="1" max="60" value="10">
+                </div>
+
+                <div class="control-group">
+                    <label>Grid Size: <span id="sizeValue">100</span></label>
+                    <input type="range" id="sizeSlider" min="50" max="200" value="100">
+                </div>
+
+                <div class="control-group">
+                    <label>Initial Density: <span id="densityValue">30%</span></label>
+                    <input type="range" id="densitySlider" min="5" max="70" value="30">
+                </div>
+
+                <div class="control-group buttons">
+                    <button id="playBtn" class="btn-primary" onclick="togglePlay()">Play</button>
+                    <button class="btn-secondary" onclick="step()">Step</button>
+                    <button class="btn-danger" onclick="reset()">Reset</button>
+                </div>
+
+                <div class="control-group">
+                    <label>Statistics</label>
+                    <div class="stats">
+                        <div><span>Generation:</span><span id="genStat">0</span></div>
+                        <div><span>Population:</span><span id="popStat">0</span></div>
+                        <div><span>Density:</span><span id="densStat">0%</span></div>
+                        <div><span>Rule:</span><span id="ruleStat">B3/S23</span></div>
+                    </div>
+                </div>
+
+                <div class="instructions">
+                    <p><strong>Click</strong> on canvas to toggle cells</p>
+                    <p><strong>Drag</strong> to draw multiple cells</p>
+                    <p><strong>Shift+Click</strong> to erase</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let gridSize = 100;
+        let cellSize = 5;
+        let grid = [];
+        let running = false;
+        let generation = 0;
+        let intervalId = null;
+        let speed = 10;
+        let density = 0.3;
+        let birthSet = new Set([3]);
+        let survivalSet = new Set([2, 3]);
+        let isDrawing = false;
+        let drawMode = 1; // 1 = draw, 0 = erase
+
+        function initCanvas() {
+            canvas.width = gridSize * cellSize;
+            canvas.height = gridSize * cellSize;
+        }
+
+        function initGrid() {
+            grid = [];
+            for (let y = 0; y < gridSize; y++) {
+                grid[y] = [];
+                for (let x = 0; x < gridSize; x++) {
+                    grid[y][x] = Math.random() < density ? 1 : 0;
+                }
+            }
+            generation = 0;
+        }
+
+        function parseRule(ruleStr) {
+            const birth = new Set();
+            const survival = new Set();
+
+            ruleStr = ruleStr.toUpperCase().replace(/\s/g, '');
+
+            let inBirth = false;
+            let inSurvival = false;
+
+            for (let i = 0; i < ruleStr.length; i++) {
+                const c = ruleStr[i];
+                if (c === 'B') {
+                    inBirth = true;
+                    inSurvival = false;
+                } else if (c === 'S' || c === '/') {
+                    inBirth = false;
+                    inSurvival = c === 'S';
+                } else if (c >= '0' && c <= '8') {
+                    if (inBirth) birth.add(parseInt(c));
+                    else if (inSurvival) survival.add(parseInt(c));
+                }
+            }
+
+            return { birth, survival };
+        }
+
+        function setRule(ruleStr) {
+            document.getElementById('ruleInput').value = ruleStr;
+            applyRule();
+        }
+
+        function applyRule() {
+            const ruleStr = document.getElementById('ruleInput').value;
+            const parsed = parseRule(ruleStr);
+            birthSet = parsed.birth;
+            survivalSet = parsed.survival;
+            document.getElementById('ruleStat').textContent = formatRule();
+        }
+
+        function formatRule() {
+            const b = [...birthSet].sort().join('');
+            const s = [...survivalSet].sort().join('');
+            return `B${b}/S${s}`;
+        }
+
+        function randomRule() {
+            const birth = [];
+            const survival = [];
+            for (let i = 0; i <= 8; i++) {
+                if (Math.random() < 0.3) birth.push(i);
+                if (Math.random() < 0.3) survival.push(i);
+            }
+            const ruleStr = `B${birth.join('')}/S${survival.join('')}`;
+            setRule(ruleStr);
+        }
+
+        function countNeighbors(x, y) {
+            let count = 0;
+            for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                    if (dx === 0 && dy === 0) continue;
+                    const nx = (x + dx + gridSize) % gridSize;
+                    const ny = (y + dy + gridSize) % gridSize;
+                    count += grid[ny][nx];
+                }
+            }
+            return count;
+        }
+
+        function step() {
+            const newGrid = [];
+            for (let y = 0; y < gridSize; y++) {
+                newGrid[y] = [];
+                for (let x = 0; x < gridSize; x++) {
+                    const neighbors = countNeighbors(x, y);
+                    const alive = grid[y][x];
+
+                    if (alive) {
+                        newGrid[y][x] = survivalSet.has(neighbors) ? 1 : 0;
+                    } else {
+                        newGrid[y][x] = birthSet.has(neighbors) ? 1 : 0;
+                    }
+                }
+            }
+            grid = newGrid;
+            generation++;
+            render();
+            updateStats();
+        }
+
+        function render() {
+            ctx.fillStyle = '#0a0a12';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#00d4ff';
+            for (let y = 0; y < gridSize; y++) {
+                for (let x = 0; x < gridSize; x++) {
+                    if (grid[y][x]) {
+                        ctx.fillRect(x * cellSize, y * cellSize, cellSize - 1, cellSize - 1);
+                    }
+                }
+            }
+        }
+
+        function updateStats() {
+            let pop = 0;
+            for (let y = 0; y < gridSize; y++) {
+                for (let x = 0; x < gridSize; x++) {
+                    pop += grid[y][x];
+                }
+            }
+            document.getElementById('genStat').textContent = generation;
+            document.getElementById('popStat').textContent = pop;
+            document.getElementById('densStat').textContent = ((pop / (gridSize * gridSize)) * 100).toFixed(1) + '%';
+        }
+
+        function togglePlay() {
+            running = !running;
+            document.getElementById('playBtn').textContent = running ? 'Pause' : 'Play';
+
+            if (running) {
+                startLoop();
+            } else {
+                stopLoop();
+            }
+        }
+
+        function startLoop() {
+            stopLoop();
+            intervalId = setInterval(step, 1000 / speed);
+        }
+
+        function stopLoop() {
+            if (intervalId) {
+                clearInterval(intervalId);
+                intervalId = null;
+            }
+        }
+
+        function reset() {
+            running = false;
+            document.getElementById('playBtn').textContent = 'Play';
+            stopLoop();
+            applyRule();
+            initGrid();
+            render();
+            updateStats();
+        }
+
+        // Event listeners
+        document.getElementById('speedSlider').addEventListener('input', (e) => {
+            speed = parseInt(e.target.value);
+            document.getElementById('speedValue').textContent = speed;
+            if (running) startLoop();
+        });
+
+        document.getElementById('sizeSlider').addEventListener('input', (e) => {
+            gridSize = parseInt(e.target.value);
+            document.getElementById('sizeValue').textContent = gridSize;
+            cellSize = Math.max(2, Math.floor(500 / gridSize));
+            initCanvas();
+            reset();
+        });
+
+        document.getElementById('densitySlider').addEventListener('input', (e) => {
+            density = parseInt(e.target.value) / 100;
+            document.getElementById('densityValue').textContent = e.target.value + '%';
+        });
+
+        document.getElementById('ruleInput').addEventListener('change', applyRule);
+        document.getElementById('ruleInput').addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') applyRule();
+        });
+
+        // Drawing on canvas
+        function getCellCoords(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor((e.clientX - rect.left) / cellSize);
+            const y = Math.floor((e.clientY - rect.top) / cellSize);
+            return { x: Math.max(0, Math.min(gridSize - 1, x)), y: Math.max(0, Math.min(gridSize - 1, y)) };
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            drawMode = e.shiftKey ? 0 : 1;
+            const { x, y } = getCellCoords(e);
+            grid[y][x] = drawMode;
+            render();
+            updateStats();
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDrawing) return;
+            const { x, y } = getCellCoords(e);
+            grid[y][x] = drawMode;
+            render();
+            updateStats();
+        });
+
+        canvas.addEventListener('mouseup', () => isDrawing = false);
+        canvas.addEventListener('mouseleave', () => isDrawing = false);
+
+        // Initialize
+        initCanvas();
+        reset();
+    </script>
+</body>
+</html>
