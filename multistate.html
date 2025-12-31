@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-State Cellular Automata</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #eee;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 { text-align: center; color: #00d4ff; margin-bottom: 5px; }
+        .subtitle { text-align: center; color: #888; margin-bottom: 20px; font-size: 14px; }
+        .main-layout { display: flex; gap: 20px; flex-wrap: wrap; }
+        .canvas-container {
+            flex: 1; min-width: 500px;
+            background: #0f0f1a; border-radius: 12px; padding: 15px;
+            display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        canvas { border: 2px solid #333; border-radius: 4px; }
+        .controls {
+            width: 320px; background: #16213e;
+            border-radius: 12px; padding: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        .control-group { margin-bottom: 18px; }
+        .control-group label {
+            display: block; margin-bottom: 8px; color: #888;
+            font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+        }
+        .control-group select, .control-group input[type="number"] {
+            width: 100%; padding: 10px; border: 1px solid #333;
+            border-radius: 6px; background: #0f0f1a; color: #eee; font-size: 14px;
+        }
+        input[type="range"] { width: 100%; margin: 5px 0; }
+        .buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+        button {
+            flex: 1; min-width: 80px; padding: 12px 16px; border: none;
+            border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;
+            transition: all 0.2s;
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        .btn-primary { background: linear-gradient(135deg, #00d4ff, #00a8cc); color: #000; }
+        .btn-secondary { background: #333; color: #eee; }
+        .btn-danger { background: linear-gradient(135deg, #e94560, #c73e54); color: #fff; }
+        .preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        .preset-grid button { font-size: 11px; padding: 10px 8px; }
+        .featured { background: linear-gradient(135deg, #00d4ff, #00a8cc) !important; color: #000 !important; }
+        .stats {
+            background: #0f0f1a; border-radius: 6px; padding: 12px;
+            font-family: monospace; font-size: 12px;
+        }
+        .stats div { display: flex; justify-content: space-between; margin-bottom: 4px; }
+        .stats span:first-child { color: #666; }
+        .stats span:last-child { color: #00d4ff; }
+        .color-preview {
+            display: flex; gap: 4px; margin-top: 8px;
+        }
+        .color-swatch {
+            width: 24px; height: 24px; border-radius: 4px;
+            border: 2px solid #333;
+        }
+        .section-title {
+            color: #00d4ff; font-size: 12px; margin: 20px 0 10px 0;
+            padding-bottom: 5px; border-bottom: 1px solid #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Multi-State Cellular Automata</h1>
+        <p class="subtitle">Cyclic automata with 3-8 colors - watch spirals and organic patterns emerge</p>
+
+        <div class="main-layout">
+            <div class="canvas-container">
+                <canvas id="canvas"></canvas>
+            </div>
+
+            <div class="controls">
+                <div class="control-group">
+                    <label>Discovered Patterns</label>
+                    <div class="preset-grid">
+                        <button class="btn-secondary featured" onclick="setPreset('organic4')">Organic Flow</button>
+                        <button class="btn-secondary" onclick="setPreset('spirals4')">Spirals</button>
+                        <button class="btn-secondary" onclick="setPreset('organic5')">5-Color Flow</button>
+                        <button class="btn-secondary" onclick="setPreset('maze5')">5-Color Maze</button>
+                        <button class="btn-secondary" onclick="setPreset('waves6')">6-Color Waves</button>
+                        <button class="btn-secondary" onclick="setPreset('rainbow8')">8-Color</button>
+                    </div>
+                </div>
+
+                <div class="section-title">Parameters</div>
+
+                <div class="control-group">
+                    <label>Number of States: <span id="statesValue">4</span></label>
+                    <input type="range" id="statesSlider" min="3" max="8" value="4">
+                    <div class="color-preview" id="colorPreview"></div>
+                </div>
+
+                <div class="control-group">
+                    <label>Threshold: <span id="thresholdValue">3</span></label>
+                    <input type="range" id="thresholdSlider" min="1" max="5" value="3">
+                </div>
+
+                <div class="control-group">
+                    <label>Speed: <span id="speedValue">15</span> gen/s</label>
+                    <input type="range" id="speedSlider" min="1" max="60" value="15">
+                </div>
+
+                <div class="control-group">
+                    <label>Grid Size: <span id="sizeValue">150</span></label>
+                    <input type="range" id="sizeSlider" min="80" max="250" value="150">
+                </div>
+
+                <div class="section-title">Controls</div>
+
+                <div class="control-group buttons">
+                    <button id="playBtn" class="btn-primary" onclick="togglePlay()">Play</button>
+                    <button class="btn-secondary" onclick="step()">Step</button>
+                    <button class="btn-danger" onclick="reset()">Reset</button>
+                </div>
+
+                <div class="control-group">
+                    <label>Statistics</label>
+                    <div class="stats">
+                        <div><span>Generation:</span><span id="genStat">0</span></div>
+                        <div><span>Rule:</span><span id="ruleStat">Cyclic4 T3</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Color palettes for different state counts
+        const palettes = {
+            3: ['#141420', '#00d4ff', '#ff6b6b'],
+            4: ['#141420', '#00d4ff', '#ff6b6b', '#ffe66d'],
+            5: ['#141420', '#00d4ff', '#6bff94', '#ffe66d', '#ff6b6b'],
+            6: ['#141420', '#00d4ff', '#6bff94', '#ffe66d', '#ff9f43', '#ff6b6b'],
+            7: ['#141420', '#00d4ff', '#6bff94', '#ffe66d', '#ff9f43', '#ff6b6b', '#a55eea'],
+            8: ['#141420', '#00d4ff', '#6bff94', '#ffe66d', '#ff9f43', '#ff6b6b', '#a55eea', '#fd79a8'],
+        };
+
+        let gridSize = 150;
+        let cellSize = 4;
+        let numStates = 4;
+        let threshold = 3;
+        let grid = [];
+        let running = false;
+        let generation = 0;
+        let intervalId = null;
+        let speed = 15;
+
+        function initCanvas() {
+            cellSize = Math.max(2, Math.floor(600 / gridSize));
+            canvas.width = gridSize * cellSize;
+            canvas.height = gridSize * cellSize;
+        }
+
+        function initGrid() {
+            grid = [];
+            for (let y = 0; y < gridSize; y++) {
+                grid[y] = [];
+                for (let x = 0; x < gridSize; x++) {
+                    grid[y][x] = Math.floor(Math.random() * numStates);
+                }
+            }
+            generation = 0;
+        }
+
+        function countNeighborsInState(x, y, state) {
+            let count = 0;
+            for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                    if (dx === 0 && dy === 0) continue;
+                    const nx = (x + dx + gridSize) % gridSize;
+                    const ny = (y + dy + gridSize) % gridSize;
+                    if (grid[ny][nx] === state) count++;
+                }
+            }
+            return count;
+        }
+
+        function step() {
+            const newGrid = [];
+            for (let y = 0; y < gridSize; y++) {
+                newGrid[y] = [];
+                for (let x = 0; x < gridSize; x++) {
+                    const currentState = grid[y][x];
+                    const nextState = (currentState + 1) % numStates;
+                    const nextNeighbors = countNeighborsInState(x, y, nextState);
+
+                    if (nextNeighbors >= threshold) {
+                        newGrid[y][x] = nextState;
+                    } else {
+                        newGrid[y][x] = currentState;
+                    }
+                }
+            }
+            grid = newGrid;
+            generation++;
+            render();
+            updateStats();
+        }
+
+        function render() {
+            const palette = palettes[numStates] || palettes[4];
+            const imageData = ctx.createImageData(canvas.width, canvas.height);
+            const data = imageData.data;
+
+            for (let y = 0; y < gridSize; y++) {
+                for (let x = 0; x < gridSize; x++) {
+                    const state = grid[y][x];
+                    const color = hexToRgb(palette[state] || '#ffffff');
+
+                    for (let cy = 0; cy < cellSize; cy++) {
+                        for (let cx = 0; cx < cellSize; cx++) {
+                            const px = x * cellSize + cx;
+                            const py = y * cellSize + cy;
+                            const idx = (py * canvas.width + px) * 4;
+                            data[idx] = color.r;
+                            data[idx + 1] = color.g;
+                            data[idx + 2] = color.b;
+                            data[idx + 3] = 255;
+                        }
+                    }
+                }
+            }
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : {r: 255, g: 255, b: 255};
+        }
+
+        function updateStats() {
+            document.getElementById('genStat').textContent = generation;
+            document.getElementById('ruleStat').textContent = `Cyclic${numStates} T${threshold}`;
+        }
+
+        function updateColorPreview() {
+            const preview = document.getElementById('colorPreview');
+            const palette = palettes[numStates] || palettes[4];
+            preview.innerHTML = palette.map(c =>
+                `<div class="color-swatch" style="background:${c}"></div>`
+            ).join('');
+        }
+
+        function togglePlay() {
+            running = !running;
+            document.getElementById('playBtn').textContent = running ? 'Pause' : 'Play';
+            if (running) {
+                intervalId = setInterval(step, 1000 / speed);
+            } else if (intervalId) {
+                clearInterval(intervalId);
+                intervalId = null;
+            }
+        }
+
+        function reset() {
+            running = false;
+            document.getElementById('playBtn').textContent = 'Play';
+            if (intervalId) { clearInterval(intervalId); intervalId = null; }
+            initGrid();
+            render();
+            updateStats();
+        }
+
+        function setPreset(name) {
+            const presets = {
+                'organic4': { states: 4, threshold: 3 },
+                'spirals4': { states: 4, threshold: 2 },
+                'organic5': { states: 5, threshold: 3 },
+                'maze5': { states: 5, threshold: 2 },
+                'waves6': { states: 6, threshold: 3 },
+                'rainbow8': { states: 8, threshold: 3 },
+            };
+            const p = presets[name];
+            if (p) {
+                numStates = p.states;
+                threshold = p.threshold;
+                document.getElementById('statesSlider').value = numStates;
+                document.getElementById('thresholdSlider').value = threshold;
+                document.getElementById('statesValue').textContent = numStates;
+                document.getElementById('thresholdValue').textContent = threshold;
+                updateColorPreview();
+                reset();
+            }
+        }
+
+        // Event listeners
+        document.getElementById('statesSlider').addEventListener('input', (e) => {
+            numStates = parseInt(e.target.value);
+            document.getElementById('statesValue').textContent = numStates;
+            updateColorPreview();
+            reset();
+        });
+
+        document.getElementById('thresholdSlider').addEventListener('input', (e) => {
+            threshold = parseInt(e.target.value);
+            document.getElementById('thresholdValue').textContent = threshold;
+        });
+
+        document.getElementById('speedSlider').addEventListener('input', (e) => {
+            speed = parseInt(e.target.value);
+            document.getElementById('speedValue').textContent = speed;
+            if (running) {
+                clearInterval(intervalId);
+                intervalId = setInterval(step, 1000 / speed);
+            }
+        });
+
+        document.getElementById('sizeSlider').addEventListener('input', (e) => {
+            gridSize = parseInt(e.target.value);
+            document.getElementById('sizeValue').textContent = gridSize;
+            initCanvas();
+            reset();
+        });
+
+        // Initialize
+        initCanvas();
+        updateColorPreview();
+        reset();
+    </script>
+</body>
+</html>
