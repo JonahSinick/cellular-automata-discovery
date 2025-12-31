@@ -183,13 +183,13 @@
                 <div class="control-group">
                     <label>Presets</label>
                     <div class="preset-rules">
-                        <button class="btn-secondary" onclick="setRule('B014/S03')" style="background:#00d4ff;color:#000">Coastlines</button>
+                        <button class="btn-secondary" onclick="setRule('B3/S2345'); setDensity(15)" style="background:#00d4ff;color:#000">Intermittent</button>
+                        <button class="btn-secondary" onclick="setRule('B3/S234'); setDensity(15)">Long Pause</button>
+                        <button class="btn-secondary" onclick="setRule('B014/S03')">Coastlines</button>
                         <button class="btn-secondary" onclick="setRule('B0126/S0')">Camouflage</button>
-                        <button class="btn-secondary" onclick="setRule('B4567/S03457')">Asteroids</button>
                         <button class="btn-secondary" onclick="setRule('B3678/S34678')">Day&Night</button>
                         <button class="btn-secondary" onclick="setRule('B3/S23')">Life</button>
                         <button class="btn-secondary" onclick="setRule('B36/S23')">HighLife</button>
-                        <button class="btn-secondary" onclick="setRule('B368/S245')">Morley</button>
                         <button class="btn-secondary" onclick="randomRule()">Random</button>
                     </div>
                 </div>
@@ -321,6 +321,13 @@
             }
             const ruleStr = `B${birth.join('')}/S${survival.join('')}`;
             setRule(ruleStr);
+        }
+
+        function setDensity(pct) {
+            density = pct / 100;
+            document.getElementById('densitySlider').value = pct;
+            document.getElementById('densityValue').textContent = pct + '%';
+            reset();
         }
 
         function countNeighbors(x, y) {
